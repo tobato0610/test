@@ -1,0 +1,98 @@
+
+import React, { useState, useEffect, useCallback } from 'react';
+import TimeInput from './components/TimeInput';
+import TimerDisplay from './components/TimerDisplay';
+import TimerControls from './components/TimerControls';
+
+const App: React.FC = () => {
+  const [minutesInput, setMinutesInput] = useState<string>('5');
+  const [timeLeft, setTimeLeft] = useState<number>(5 * 60);
+  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
+  const [isTimerSet, setIsTimerSet] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!isTimerRunning) {
+      return;
+    }
+
+    if (timeLeft <= 0) {
+      setIsTimerRunning(false);
+      if (isTimerSet) {
+        // Use a more modern notification if available, but alert is universal
+        setTimeout(() => alert('Time is up!'), 100); 
+      }
+      setIsTimerSet(false);
+      const initialSeconds = parseInt(minutesInput, 10) * 60 || 0;
+      setTimeLeft(initialSeconds);
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      setTimeLeft(prevTime => prevTime - 1);
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [isTimerRunning, timeLeft, isTimerSet, minutesInput]);
+
+  const handleMinutesChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Allow empty input for better UX, but cap at a reasonable number
+    if (value === '' || (/^\d+$/.test(value) && parseInt(value, 10) <= 999)) {
+        setMinutesInput(value);
+        if(!isTimerSet) {
+            setTimeLeft((parseInt(value, 10) || 0) * 60);
+        }
+    }
+  }, [isTimerSet]);
+
+  const handleStart = useCallback(() => {
+    const initialSeconds = parseInt(minutesInput, 10) * 60;
+    if (initialSeconds > 0) {
+      setTimeLeft(initialSeconds);
+      setIsTimerSet(true);
+      setIsTimerRunning(true);
+    } else {
+        alert("Please enter a valid time greater than 0.");
+    }
+  }, [minutesInput]);
+  
+  const handlePauseResume = useCallback(() => {
+    setIsTimerRunning(prev => !prev);
+  }, []);
+
+  const handleReset = useCallback(() => {
+    setIsTimerRunning(false);
+    setIsTimerSet(false);
+    const initialSeconds = parseInt(minutesInput, 10) * 60 || 0;
+    setTimeLeft(initialSeconds);
+  }, [minutesInput]);
+
+  return (
+    <div className="flex items-center justify-center min-h-screen p-4">
+      <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 sm:p-8 space-y-8 transform transition-all hover:scale-[1.01] duration-300">
+        <header className="text-center">
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 dark:text-white">Simple Timer</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-2">Clean, simple, and effective.</p>
+        </header>
+        
+        <TimerDisplay timeLeft={timeLeft} />
+        
+        <TimeInput 
+          value={minutesInput}
+          onChange={handleMinutesChange}
+          disabled={isTimerSet}
+        />
+        
+        <TimerControls 
+          isTimerSet={isTimerSet}
+          isTimerRunning={isTimerRunning}
+          onStart={handleStart}
+          onPauseResume={handlePauseResume}
+          onReset={handleReset}
+        />
+      </div>
+    </div>
+  );
+};
+
+export default App;
